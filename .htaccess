@@ -1,0 +1,7 @@
+
+Options -Indexes
+
+# Protect the database configuration file
+<Files "config.php">
+    Require all denied
+</Files>

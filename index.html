@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BlueHands: trusted local tradespeople</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Tailwind Play CDN for development. For production, build with the Tailwind CLI. -->
+<script>try{var t=localStorage.getItem('bh_theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{denim:'#1F3A5F',ink:'#14202E',hazard:'#F2B705',chalk:'#ECEAE4'},fontFamily:{display:['"Barlow Condensed"','Impact','sans-serif'],sans:['Barlow','system-ui','sans-serif']}}}}</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<style>
+.stripe{background:repeating-linear-gradient(-45deg,#F2B705 0 14px,#14202E 14px 28px)}
+[x-cloak]{display:none!important}
+:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+.btn{transition:transform .15s,box-shadow .15s,background .15s}.btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(20,32,46,.25)}.btn:active{transform:translateY(1px);box-shadow:none}
+.lift{transition:transform .2s,box-shadow .2s}.lift:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:0 12px 24px rgba(20,32,46,.18)}
+.in1{animation:up .7s both}.in2{animation:up .7s .12s both}.in3{animation:up .7s .24s both}.in4{animation:up .8s .36s both}
+@keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+.ticker{display:flex;width:max-content;animation:tick 28s linear infinite}.ticker:hover{animation-play-state:paused}
+@keyframes tick{to{transform:translateX(-50%)}}
+.shimmer{background:linear-gradient(90deg,#e7e5e4 25%,#f5f5f4 50%,#e7e5e4 75%);background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+.fillbar{transition:width .5s cubic-bezier(.3,1.4,.5,1)}
+body{transition:background-color .3s,color .3s}
+html.dark{color-scheme:dark}
+.dark body{background:#0b121b;color:#e7ecf2}
+.dark .bg-white{background:#17222f}
+.dark .bg-chalk{background:#0f1a26}
+.dark .hover\:bg-white:hover,.dark .hover\:bg-stone-100:hover{background:#223347}
+.dark .hover\:text-ink:hover{color:#fff}
+.dark .border-stone-300,.dark .border-stone-200{border-color:#2e4157}
+.dark .border-stone-400{border-color:#4a6079}
+.dark .border-ink{border-color:#8ea3bb}
+.dark .text-slate-600,.dark .text-slate-500{color:#a9b7c8}
+.dark .text-slate-400{color:#7f93a9}
+.dark .bg-hazard{color:#14202E}
+.dark input,.dark select{background:#0f1a26;color:#e7ecf2}
+.dark input::placeholder{color:#7f93a9}
+.dark .text-green-700{color:#4ade80}
+.dark .bg-red-50{background:#3a1a1a}.dark .text-red-800{color:#fecaca}
+.dark .bg-stone-200{background:#2e4157}
+.dark .shimmer{background:linear-gradient(90deg,#17222f 25%,#223347 50%,#17222f 75%);background-size:200% 100%}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="bg-chalk text-ink font-sans text-[17px]" x-data="app()" x-init="init()" x-cloak>
+
+<header class="bg-ink text-white sticky top-0 z-20">
+ <div class="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
+  <a href="#home" class="font-display font-extrabold text-3xl flex items-center gap-2"><span class="w-6 h-6 bg-hazard rounded-tl-md rounded-tr-md rounded-br-2xl rounded-bl-md"></span>BlueHands</a>
+  <nav class="hidden lg:flex gap-1">
+   <template x-for="n in nav" :key="n[0]"><a :href="'#'+n[0]" x-text="n[1]" class="px-3 py-2 rounded-lg font-medium hover:bg-white/10" :class="page===n[0]&&'bg-hazard text-ink hover:bg-hazard'"></a></template>
+  </nav>
+  <div class="hidden lg:flex gap-2 items-center">
+   <template x-if="user"><a href="#account" class="btn bg-hazard text-ink font-semibold px-4 py-2 rounded-lg" x-text="user.name.split(' ')[0]"></a></template>
+   <template x-if="!user"><span class="flex gap-2"><a href="#login" class="px-4 py-2 rounded-lg font-semibold hover:bg-white/10">Log in</a><a href="#signup" class="btn bg-hazard text-ink font-semibold px-4 py-2 rounded-lg">Sign up</a></span></template>
+  </div>
+  <button @click="cycleTheme()" class="ml-auto lg:ml-0 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 font-medium" :aria-label="'Display mode: '+theme+'. Tap to change.'" title="Display mode">
+   <span class="text-xl leading-none" aria-hidden="true" x-text="{auto:'◐',light:'☀',dark:'☾'}[theme]"></span><span class="hidden sm:inline text-[15px]" x-text="{auto:'Auto',light:'Light',dark:'Dark'}[theme]"></span></button>
+  <button class="lg:hidden p-2 rounded-lg hover:bg-white/10" @click="menu=!menu" :aria-expanded="menu" aria-label="Menu">
+   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path :d="menu?'M5 5l14 14M19 5L5 19':'M4 7h16M4 12h16M4 17h16'"/></svg></button>
+ </div>
+ <div x-show="menu" x-transition class="lg:hidden border-t border-white/10 px-5 pb-4 pt-2 grid gap-1" @click="menu=false">
+  <template x-for="n in nav" :key="n[0]"><a :href="'#'+n[0]" x-text="n[1]" class="px-3 py-3 rounded-lg font-medium" :class="page===n[0]?'bg-hazard text-ink':'hover:bg-white/10'"></a></template>
+  <template x-if="user"><a href="#account" class="px-3 py-3 rounded-lg font-medium hover:bg-white/10" x-text="'My account ('+user.name.split(' ')[0]+')'"></a></template>
+  <template x-if="!user"><div class="grid grid-cols-2 gap-2 mt-2"><a href="#login" class="border-2 border-white/40 text-center py-3 rounded-lg font-semibold">Log in</a><a href="#signup" class="bg-hazard text-ink text-center py-3 rounded-lg font-semibold">Sign up</a></div></template>
+ </div>
+ <div class="h-3.5 stripe"></div>
+</header>
+
+<div x-show="toast" x-transition.opacity x-text="toast" role="status" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-ink text-white px-5 py-3 rounded-lg z-40 shadow-lg max-w-[90vw]"></div>
+
+<main>
+<!-- HOME -->
+<section x-show="page==='home'">
+ <div class="bg-denim text-white pt-14 pb-0 overflow-hidden"><div class="max-w-6xl mx-auto px-5 grid lg:grid-cols-2 gap-10 items-center pb-12">
+  <div><h1 class="in1 font-display font-extrabold leading-[.95] text-6xl md:text-8xl">Hire hands your neighbors already trust.</h1>
+   <p class="in2 text-lg text-blue-100 mt-5 max-w-md">Watch a worker’s demo, see who vouches for them, and pay safely through escrow. Money moves only when the job is done.</p>
+   <div class="in3 mt-6 flex flex-wrap gap-3"><a href="#workers" class="btn bg-hazard text-ink font-semibold px-6 py-3 rounded-lg">Find a worker</a><a href="#signup" class="btn border-2 border-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-ink">Create an account</a></div></div>
+  <div class="in4 bg-ink rounded-2xl p-5 shadow-2xl">
+   <p class="font-display font-extrabold text-3xl mb-1">Try an escrow job</p>
+   <p class="text-blue-200 text-[15px] mb-4">Tap through to see how your money stays safe.</p>
+   <div class="flex items-center gap-2 mb-4"><template x-for="(s,i) in ['Funded','Work done','Paid']"><div class="flex-1"><div class="h-2 rounded-full bg-white/15 overflow-hidden"><div class="h-full bg-hazard fillbar" :style="'width:'+(demoStep>i?100:0)+'%'"></div></div><p class="text-sm mt-1" :class="demoStep>i?'text-hazard font-semibold':'text-blue-300'" x-text="s"></p></div></template></div>
+   <div class="rounded-xl bg-white/5 p-4 min-h-[88px]"><p class="font-semibold" x-text="['Kitchen wiring · 45,000 FCFA','45,000 FCFA is held by BlueHands. The worker starts.','You confirm the job. Payment is released.','The worker is paid, minus a 3% fee. Reviews open.'][demoStep]"></p>
+    <p class="text-blue-200 text-[15px] mt-1" x-text="['Nothing has moved yet.','Not paid out yet.','Released from escrow.','Done. Everyone is happy.'][demoStep]"></p></div>
+   <button @click="demoStep=(demoStep+1)%4" class="btn mt-4 bg-hazard text-ink font-semibold px-5 py-2.5 rounded-lg" x-text="['Fund escrow','Mark work done','Release payment','Start again'][demoStep]"></button>
+  </div>
+ </div>
+ <div class="bg-ink py-3 overflow-hidden" aria-hidden="true"><div class="ticker font-display font-extrabold text-2xl text-hazard">
+  <template x-for="i in 2"><div class="flex"><template x-for="t in trades"><button class="px-6 whitespace-nowrap hover:text-white" @click="q=t;cat='';location.hash='workers'" x-text="t"></button></template></div></template></div></div>
+ </div>
+ <div class="max-w-6xl mx-auto px-5 py-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <template x-for="s in steps"><div class="lift bg-white border-l-8 border-hazard rounded-r-xl p-5"><h3 class="font-display font-extrabold text-3xl mb-1" x-text="s[0]"></h3><p class="text-slate-600" x-text="s[1]"></p></div></template>
+ </div>
+</section>
+
+<!-- WORKERS -->
+<section x-show="page==='workers'" class="max-w-6xl mx-auto px-5 py-10">
+ <h2 class="font-display font-extrabold text-5xl mb-2">Find a worker</h2>
+ <p class="text-slate-600 mb-6 max-w-xl">Listed by how they earned their place: a checked certificate, or proven experience backed by local vouches.</p>
+ <div class="flex flex-wrap gap-3 mb-4">
+  <template x-for="c in [['','All workers','Everyone listed'],['cert','Employed on certification','Certificate or licence checked'],['exp','Employed on experience','Years of work, vouched by locals']]">
+   <button @click="cat=c[0]" class="btn px-5 py-3 rounded-xl border-2 border-ink text-left font-semibold" :class="cat===c[0]?'bg-ink text-white':'hover:bg-white'"><span x-text="c[1]"></span><small class="block font-normal opacity-80" x-text="c[2]"></small></button></template>
+ </div>
+ <div class="relative mb-6 max-w-md"><input x-model="q" type="search" placeholder="Search by name, trade or area" class="w-full border-2 border-stone-300 focus:border-denim rounded-xl py-3 pl-11 pr-4 bg-white" aria-label="Search workers">
+  <svg class="absolute left-3.5 top-3.5 text-slate-400" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+ <div x-show="loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"><template x-for="i in 3"><div class="shimmer rounded-xl h-72"></div></template></div>
+ <div x-show="!loading&&!shown.length" class="bg-white rounded-xl border-2 border-dashed border-stone-300 p-10 text-center"><p class="font-display font-extrabold text-3xl">No workers match yet</p><p class="text-slate-600 mb-4">Try a different trade or clear the search.</p><button @click="q='';cat=''" class="btn bg-hazard font-semibold px-5 py-2.5 rounded-lg">Show all workers</button></div>
+ <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <template x-for="w in shown" :key="w.id">
+   <article class="lift bg-white border border-stone-300 rounded-xl overflow-hidden flex flex-col">
+    <button @click="demo=w" class="group aspect-video bg-denim text-white grid place-items-center relative" :aria-label="'Watch demo of '+w.name">
+     <video x-show="w.video" :src="w.video" class="absolute inset-0 w-full h-full object-cover" muted playsinline preload="metadata"></video>
+     <span class="relative bg-hazard text-ink rounded-full w-14 h-14 grid place-items-center transition group-hover:scale-110">▶</span></button>
+    <div class="p-4 flex flex-col gap-1 flex-1">
+     <span class="self-start text-sm font-semibold px-3 py-0.5 rounded-full" :class="w.category==='cert'?'bg-hazard':'border-2 border-slate-500'" x-text="(w.category==='cert'?'Certified, ':'')+(w.detail||'New member')"></span>
+     <h3 class="font-display font-extrabold text-3xl" x-text="w.name"></h3>
+     <p class="text-slate-600 text-[15px]" x-text="(w.trade||'Worker')+' in '+(w.area||'your area')"></p>
+     <p class="text-slate-600 text-[15px]" x-text="w.vouches?('Vouched by '+w.vouches+' people nearby'):'New, awaiting vouches'"></p>
+     <button @click="startHire(w)" class="btn mt-3 self-start bg-hazard font-semibold px-4 py-2 rounded-lg">Hire and pay</button></div>
+   </article></template>
+ </div>
+</section>
+
+<!-- AI INTERVIEW -->
+<section x-show="page==='interview'" class="max-w-4xl mx-auto px-5 py-10">
+ <h2 class="font-display font-extrabold text-5xl mb-2">AI interview</h2>
+ <p class="text-slate-600 mb-6">A short chat that builds a worker profile or an employer job brief.</p>
+ <div class="bg-white border border-stone-300 rounded-xl p-5">
+  <div class="grid sm:grid-cols-2 gap-3 mb-3">
+   <label class="font-semibold">I am a<select x-model="iv.role" class="w-full border-2 border-stone-300 rounded-lg p-2 mt-1 font-normal"><option value="worker">Worker looking for jobs</option><option value="employer">Employer hiring</option></select></label>
+   <label class="font-semibold">Trade or job type<input x-model="iv.trade" placeholder="e.g. plumbing" class="w-full border-2 border-stone-300 rounded-lg p-2 mt-1 font-normal"></label></div>
+  <button @click="ivStart()" class="btn bg-hazard font-semibold px-5 py-2.5 rounded-lg">Start interview</button>
+  <div x-show="iv.on" x-transition class="mt-4"><div class="h-80 overflow-y-auto border-2 border-stone-300 rounded-lg p-3 space-y-2 bg-chalk" x-ref="chat">
+   <template x-for="m in iv.msgs"><div class="in1 max-w-[85%] px-4 py-2 rounded-xl whitespace-pre-wrap" :class="m.role==='assistant'?'bg-denim text-white':'bg-hazard ml-auto'" x-text="m.content"></div></template>
+   <div x-show="iv.busy" class="flex gap-1 p-2"><span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span><span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay:.15s"></span><span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay:.3s"></span></div></div>
+   <form @submit.prevent="ivSend()" class="flex gap-2 mt-3"><input x-model="iv.text" class="flex-1 border-2 border-stone-300 rounded-lg p-2" placeholder="Type your answer"><button class="btn bg-hazard font-semibold px-5 rounded-lg disabled:opacity-50" :disabled="iv.busy">Send</button></form></div>
+ </div>
+</section>
+
+<!-- WALLET -->
+<section x-show="page==='wallet'" class="max-w-4xl mx-auto px-5 py-10">
+ <h2 class="font-display font-extrabold text-5xl mb-2">Jobs and wallet</h2>
+ <template x-if="!user"><div><p class="text-slate-600 mb-4">Log in to fund jobs, get paid and withdraw.</p><a href="#login" class="btn bg-hazard font-semibold px-5 py-3 rounded-lg inline-block">Log in</a> <a href="#signup" class="btn border-2 border-ink font-semibold px-5 py-3 rounded-lg inline-block ml-2">Sign up</a></div></template>
+ <template x-if="user"><div class="space-y-4">
+  <div class="bg-ink text-white rounded-xl p-5"><p class="text-blue-200">Wallet balance</p><p class="font-display font-extrabold text-6xl text-hazard" x-text="fc(user.balance)"></p></div>
+  <div class="bg-white border border-stone-300 rounded-xl p-5">
+   <h3 class="font-display font-extrabold text-3xl mb-3" x-text="user.role==='employer'?'Add money':'Withdraw'"></h3>
+   <div class="grid sm:grid-cols-3 gap-2 mb-3"><template x-for="m in (user.role==='employer'?['MTN Mobile Money','Orange Money','Bank card']:['MTN Mobile Money','Orange Money'])">
+    <label class="border-2 rounded-xl p-3 font-semibold cursor-pointer transition hover:-translate-y-0.5" :class="pay.method===m?'border-denim ring-2 ring-hazard':'border-stone-300'"><input type="radio" class="sr-only" :value="m" x-model="pay.method"><span x-text="m"></span></label></template></div>
+   <div class="flex gap-3 flex-wrap"><input type="number" min="500" step="500" x-model="pay.amount" placeholder="Amount (FCFA)" class="flex-1 min-w-40 border-2 border-stone-300 rounded-lg p-2">
+    <button @click="payGo()" class="btn bg-hazard font-semibold px-5 py-2 rounded-lg" x-text="user.role==='employer'?'Add to wallet':'Withdraw'"></button></div>
+   <p class="text-sm text-slate-500 mt-2">Demo: payments are simulated until a mobile money provider is connected.</p></div>
+  <div class="bg-white border border-stone-300 rounded-xl p-5"><h3 class="font-display font-extrabold text-3xl mb-2">Jobs</h3>
+   <p x-show="!wallet.jobs.length" class="text-slate-500">No jobs yet. <a href="#workers" class="underline font-semibold">Find a worker</a> to start one.</p>
+   <template x-for="j in wallet.jobs" :key="j.id"><div class="flex flex-wrap justify-between gap-3 items-center py-3 border-t border-stone-200">
+    <div><b x-text="j.title"></b><p class="text-sm text-slate-600" x-text="(user.role==='employer'?'Worker: '+j.worker_name:'Employer: '+j.employer_name)+' · '+fc(j.amount)"></p></div>
+    <div class="flex flex-wrap gap-2 items-center"><span class="text-sm font-semibold px-3 py-0.5 rounded-full" :class="{'bg-hazard':j.status==='held','bg-green-700 text-white':j.status==='paid','border-2 border-slate-500':j.status==='refunded'}" x-text="{held:'Held in escrow',paid:'Paid',refunded:'Refunded'}[j.status]"></span>
+     <template x-if="user.role==='employer'&&j.status==='held'"><span class="flex gap-2"><button @click="settle('release',j.id)" class="btn bg-hazard font-semibold px-3 py-1.5 rounded-lg text-sm">Work done, release</button><button @click="settle('refund',j.id)" class="btn border-2 border-ink px-3 py-1.5 rounded-lg text-sm font-semibold">Refund</button></span></template></div></div></template></div>
+  <div class="bg-white border border-stone-300 rounded-xl p-5"><h3 class="font-display font-extrabold text-3xl mb-2">Recent activity</h3>
+   <p x-show="!wallet.tx.length" class="text-slate-500">Nothing yet.</p>
+   <template x-for="t in wallet.tx"><div class="flex justify-between gap-3 py-2 border-t border-stone-200"><span x-text="t.text"></span><b class="whitespace-nowrap" :class="t.amount>0?'text-green-700':''" x-text="(t.amount>0?'+':'')+fc(t.amount)"></b></div></template></div>
+ </div></template>
+</section>
+
+<!-- LOGIN -->
+<section x-show="page==='login'" class="min-h-[calc(100vh-120px)] grid lg:grid-cols-2">
+ <div class="hidden lg:flex bg-denim text-white p-12 flex-col justify-between relative overflow-hidden">
+  <div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-hazard/20"></div><div class="absolute right-24 bottom-32 w-24 h-24 rounded-2xl bg-hazard/30 rotate-12"></div>
+  <h2 class="font-display font-extrabold text-7xl leading-[.95] relative">Good to see you again.</h2>
+  <p class="text-blue-100 text-lg max-w-sm relative">Your jobs, your wallet and your escrow are waiting right where you left them.</p>
+ </div>
+ <div class="p-5 sm:p-10 grid place-items-center"><form @submit.prevent="login()" class="w-full max-w-md space-y-4" novalidate>
+  <h2 class="font-display font-extrabold text-5xl">Log in</h2>
+  <div><label for="lp" class="font-semibold">Phone number</label><input id="lp" x-model="f.phone" inputmode="tel" autocomplete="tel" placeholder="+2376XXXXXXXX" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3 bg-white"></div>
+  <div><label for="lw" class="font-semibold">Password</label><div class="relative"><input id="lw" :type="showPw?'text':'password'" x-model="f.password" autocomplete="current-password" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3 pr-20 bg-white"><button type="button" @click="showPw=!showPw" class="absolute right-2 top-2 px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-stone-100" x-text="showPw?'Hide':'Show'"></button></div></div>
+  <p x-show="err" x-transition class="bg-red-50 border-l-4 border-red-600 text-red-800 px-3 py-2 rounded-r-lg" x-text="err" role="alert"></p>
+  <button class="btn w-full bg-hazard font-semibold py-3 rounded-lg disabled:opacity-60" :disabled="busy" x-text="busy?'Logging in...':'Log in'"></button>
+  <button type="button" x-show="bioOK" @click="bioLogin()" class="btn w-full border-2 border-ink py-3 rounded-lg font-semibold">Use fingerprint or face</button>
+  <p class="text-slate-600">New to BlueHands? <a href="#signup" class="font-semibold underline">Create an account</a></p>
+ </form></div>
+</section>
+
+<!-- SIGNUP -->
+<section x-show="page==='signup'" class="max-w-2xl mx-auto px-5 py-10">
+ <h2 class="font-display font-extrabold text-5xl mb-1">Create your account</h2>
+ <p class="text-slate-600 mb-5">Already have one? <a href="#login" class="font-semibold underline">Log in</a></p>
+ <div class="mb-6"><div class="flex justify-between text-sm font-semibold mb-1"><span x-text="'Step '+su+' of '+(f.role==='worker'?3:2)"></span><span x-text="['','Your role','Your details','Your work'][su]"></span></div>
+  <div class="h-3 rounded-full bg-white border border-stone-300 overflow-hidden"><div class="h-full bg-hazard fillbar" :style="'width:'+(su/(f.role==='worker'?3:2)*100)+'%'"></div></div></div>
+ <form @submit.prevent="next()" class="bg-white border border-stone-300 rounded-xl p-5 sm:p-6 space-y-4" novalidate>
+  <div x-show="su===1" x-transition class="grid sm:grid-cols-2 gap-3">
+   <template x-for="r in [['worker','I want to find work','Show your skills, get vouched for and paid through escrow.'],['employer','I want to hire','Watch demos, compare workers and pay only when the job is done.']]">
+    <button type="button" @click="f.role=r[0];su=2" class="lift text-left rounded-xl border-2 p-4" :class="f.role===r[0]?'border-denim bg-hazard/20':'border-stone-300'"><b class="font-display text-3xl block" x-text="r[1]"></b><span class="text-slate-600 text-[15px]" x-text="r[2]"></span></button></template></div>
+  <div x-show="su===2" x-transition class="space-y-4">
+   <div><label for="sn" class="font-semibold">Full name</label><input id="sn" x-model="f.name" autocomplete="name" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3"></div>
+   <div><label for="sp" class="font-semibold">Phone number</label><input id="sp" x-model="f.phone" inputmode="tel" autocomplete="tel" placeholder="+2376XXXXXXXX" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3"></div>
+   <div><label for="sw" class="font-semibold">Password</label><div class="relative"><input id="sw" :type="showPw?'text':'password'" x-model="f.password" autocomplete="new-password" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3 pr-20"><button type="button" @click="showPw=!showPw" class="absolute right-2 top-2 px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-stone-100" x-text="showPw?'Hide':'Show'"></button></div>
+    <div class="flex gap-1 mt-2"><template x-for="i in 4"><div class="h-1.5 flex-1 rounded-full transition-colors" :class="pwScore>=i?['','bg-red-500','bg-orange-400','bg-lime-500','bg-green-600'][pwScore]:'bg-stone-200'"></div></template></div>
+    <p class="text-sm text-slate-600 mt-1" x-text="f.password?['','Weak. Add more characters.','Fair. Add numbers or capitals.','Good.','Strong.'][pwScore]:'Use 8 or more characters with a number and a capital.'"></p></div>
+   <label class="flex items-center gap-2" x-show="bioOK&&f.role==='employer'"><input type="checkbox" x-model="f.bio" class="w-5 h-5 accent-denim"> Use fingerprint or face to log in</label>
+  </div>
+  <div x-show="su===3&&f.role==='worker'" x-transition class="space-y-4">
+   <div class="grid sm:grid-cols-2 gap-3">
+    <div><label class="font-semibold" for="st">Your trade</label><input id="st" x-model="f.trade" list="tl" placeholder="e.g. Electrician" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3"><datalist id="tl"><template x-for="t in trades"><option :value="t"></option></template></datalist></div>
+    <div><label class="font-semibold" for="sa">Your area</label><input id="sa" x-model="f.area" placeholder="e.g. Molyko" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3"></div></div>
+   <div><p class="font-semibold mb-1">How should people hire you?</p><div class="grid grid-cols-2 gap-2">
+    <template x-for="c in [['cert','Certification'],['exp','Experience']]"><button type="button" @click="f.category=c[0]" class="btn rounded-lg border-2 py-2.5 font-semibold" :class="f.category===c[0]?'bg-ink text-white border-ink':'border-stone-300'" x-text="c[1]"></button></template></div></div>
+   <div><label class="font-semibold" for="sd" x-text="f.category==='cert'?'Certificate name':'Years of experience'"></label><input id="sd" x-model="f.detail" :placeholder="f.category==='cert'?'e.g. CAP Electricity':'e.g. 6 years'" class="w-full border-2 border-stone-300 focus:border-denim rounded-lg p-3"></div>
+   <div><label class="font-semibold">Demo video of your work (optional)</label>
+    <label class="mt-1 block border-2 border-dashed border-stone-400 rounded-xl p-4 text-center cursor-pointer hover:bg-hazard/10"><input type="file" accept="video/mp4,video/webm,video/quicktime" class="sr-only" @change="pickVideo($event)"><span x-text="video?video.name:'Tap to choose a video'"></span></label>
+    <video x-show="vidUrl" :src="vidUrl" controls playsinline class="mt-2 w-full rounded-lg bg-black max-h-60"></video></div>
+   <label class="flex items-center gap-2" x-show="bioOK"><input type="checkbox" x-model="f.bio" class="w-5 h-5 accent-denim"> Use fingerprint or face to log in</label>
+  </div>
+  <p x-show="err" x-transition class="bg-red-50 border-l-4 border-red-600 text-red-800 px-3 py-2 rounded-r-lg" x-text="err" role="alert"></p>
+  <div class="flex gap-3 justify-between pt-1" x-show="su>1"><button type="button" @click="su--;err=''" class="btn border-2 border-ink px-5 py-2.5 rounded-lg font-semibold">Back</button>
+   <button class="btn bg-hazard font-semibold px-6 py-2.5 rounded-lg disabled:opacity-60" :disabled="busy" x-text="busy?'Creating...':(su===(f.role==='worker'?3:2)?'Create account':'Continue')"></button></div>
+ </form>
+</section>
+
+<!-- ACCOUNT -->
+<section x-show="page==='account'" class="max-w-2xl mx-auto px-5 py-10">
+ <template x-if="user"><div class="bg-white border border-stone-300 rounded-xl overflow-hidden">
+  <div class="stripe h-3"></div><div class="p-6">
+  <div class="w-16 h-16 rounded-full bg-hazard grid place-items-center font-display font-extrabold text-4xl mb-3" x-text="user.name[0]"></div>
+  <h2 class="font-display font-extrabold text-5xl" x-text="user.name"></h2>
+  <p class="text-slate-600" x-text="(user.role==='worker'?'Worker':'Employer')+' · '+user.phone"></p>
+  <p class="mt-3">Biometric sign-in: <b x-text="user.bio?'On':'Off'"></b></p>
+  <div class="flex flex-wrap gap-3 mt-4"><a href="#wallet" class="btn bg-ink text-white font-semibold px-4 py-2 rounded-lg">Jobs and wallet</a><button x-show="bioOK||user.bio" @click="user.bio?bioOff():bioEnrol()" class="btn bg-hazard font-semibold px-4 py-2 rounded-lg" x-text="user.bio?'Turn off biometrics':'Turn on fingerprint or face'"></button><button @click="logout()" class="btn border-2 border-ink px-4 py-2 rounded-lg font-semibold">Log out</button></div></div></div></template>
+</section>
+</main>
+
+<!-- demo + hire modals -->
+<div x-show="demo" x-transition.opacity @keydown.escape.window="demo=null;hire=null" class="fixed inset-0 bg-black/80 z-30 grid place-items-center p-5" @click.self="demo=null"><div class="bg-white rounded-2xl p-4 w-full max-w-2xl">
+ <template x-if="demo&&demo.video"><video :src="demo.video" controls autoplay playsinline class="w-full rounded-lg bg-black"></video></template>
+ <p x-show="demo&&!demo.video" class="p-10 text-center"><b class="font-display text-3xl" x-text="demo?demo.name+'’s work demo':''"></b><br>No video uploaded yet</p>
+ <button @click="demo=null" class="btn mt-3 bg-hazard font-semibold px-4 py-2 rounded-lg">Close</button></div></div>
+<div x-show="hire" x-transition.opacity class="fixed inset-0 bg-black/80 z-30 grid place-items-center p-5" @click.self="hire=null"><div class="bg-white rounded-2xl p-6 w-full max-w-lg" x-show="hire">
+ <h3 class="font-display font-extrabold text-4xl mb-3" x-text="hire?'Hire '+hire.name:''"></h3>
+ <input x-model="hireF.title" placeholder="Job, e.g. Fix kitchen wiring" class="w-full border-2 border-stone-300 rounded-lg p-2 mb-2"><input type="number" x-model="hireF.amount" placeholder="Agreed price (FCFA)" class="w-full border-2 border-stone-300 rounded-lg p-2">
+ <p class="text-sm text-slate-600 my-3">Held in escrow until you confirm the work is done. A 3% service fee is taken from the worker’s payout.</p>
+ <button @click="doHire()" class="btn bg-hazard font-semibold px-5 py-2.5 rounded-lg">Fund escrow</button> <button @click="hire=null" class="px-4 py-2.5 font-semibold">Cancel</button></div></div>
+
+<footer class="bg-ink text-slate-300 py-8 mt-10 text-[15px]"><div class="max-w-6xl mx-auto px-5">BlueHands. Trust comes from people who have seen the work.</div></footer>
+
+<script>
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const PAGES=['home','workers','interview','wallet','login','signup','account'];
+function app(){return{
+ page:'home',theme:'auto',user:null,workers:[],cat:'',q:'',loading:true,wallet:{jobs:[],tx:[]},toast:'',menu:false,
+ f:{role:'worker',category:'cert'},video:null,vidUrl:'',su:1,err:'',busy:false,showPw:false,demoStep:0,
+ demo:null,hire:null,hireF:{},pay:{method:'MTN Mobile Money',amount:''},bioOK:false,
+ iv:{role:'worker',trade:'',msgs:[],text:'',on:false,busy:false},
+ trades:['Electrician','Plumber','Carpenter','Mason','Painter','Welder','Tiler','Mechanic','Roofer','Tailor'],
+ nav:[['home','Home'],['workers','Find workers'],['interview','AI interview'],['wallet','Jobs and wallet']],
+ steps:[['Watch and compare','Browse by certificate or experience and watch a demo of the work.'],['Hire with escrow','Fund the job. BlueHands holds the money until you confirm.'],['Get paid fast','Workers get paid to their wallet and withdraw to mobile money.'],['Log in with your finger or face','No passwords to forget on your own phone.']],
+ get shown(){const s=this.q.trim().toLowerCase();return this.workers.filter(w=>(!this.cat||w.category===this.cat)&&(!s||[w.name,w.trade,w.area].join(' ').toLowerCase().includes(s)))},
+ get pwScore(){const p=this.f.password||'';if(!p)return 0;return Math.max(1,(p.length>=8)+/\d/.test(p)+/[A-Z]/.test(p)+/[^\w\s]|(?=.*[a-z]).{12,}/.test(p))},
+ fc(n){return Math.round(n).toLocaleString('en')+' FCFA'},
+ initTheme(){try{this.theme=localStorage.getItem('bh_theme')||'auto'}catch(e){}this.paint();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>this.paint())},
+ paint(){const d=this.theme==='dark'||(this.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)},
+ cycleTheme(){const o=['auto','light','dark'];this.theme=o[(o.indexOf(this.theme)+1)%3];try{localStorage.setItem('bh_theme',this.theme)}catch(e){}this.paint();this.say({auto:'Display follows your device.',light:'Light mode on.',dark:'Dark mode on.'}[this.theme])},
+ say(t){this.toast=t;clearTimeout(this._t);this._t=setTimeout(()=>this.toast='',3200)},
+ async api(a,body){
+  const o={method:body===undefined?'GET':'POST',headers:{'X-Requested-With':'bh'}};
+  if(body instanceof FormData)o.body=body;else if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
+  const r=await fetch('api.php?a='+a,o),d=await r.json().catch(()=>({error:'Server error'}));
+  if(!r.ok)throw new Error(d.error||'Something went wrong');return d},
+ async init(){this.initTheme();
+  const go=()=>{let h=location.hash.slice(1);if(!PAGES.includes(h))h='home';
+   if(h==='account'&&!this.user)h='login';if((h==='login'||h==='signup')&&this.user)h='account';
+   this.page=h;this.err='';this.menu=false;this.showPw=false;
+   if(h==='workers')this.loadWorkers();if(h==='wallet')this.loadWallet();scrollTo(0,0)};
+  addEventListener('hashchange',go);
+  try{this.user=await this.api('me')}catch(e){}
+  if(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+   this.bioOK=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  go()},
+ async loadWorkers(){this.loading=!this.workers.length;try{this.workers=await this.api('workers')}catch(e){this.say(e.message)}this.loading=false},
+ async loadWallet(){if(!this.user)return;try{this.wallet=await this.api('wallet');this.user=this.wallet.user}catch(e){this.say(e.message)}},
+ pickVideo(e){const v=e.target.files[0];if(this.vidUrl)URL.revokeObjectURL(this.vidUrl);this.video=v||null;this.vidUrl=v?URL.createObjectURL(v):''},
+ async login(){
+  this.err='';if(!this.f.phone||!this.f.password){this.err='Enter your phone number and password.';return}
+  this.busy=true;
+  try{this.user=await this.api('login',{phone:this.f.phone.replace(/\s/g,''),password:this.f.password});this.f={role:'worker',category:'cert'};this.say('Welcome back, '+this.user.name.split(' ')[0]+'.');location.hash=this.user.role==='worker'?'workers':'wallet'}
+  catch(e){this.err=e.message==='Server error'?'We could not reach the server. Check your connection and try again.':e.message}
+  this.busy=false},
+ next(){
+  this.err='';const last=this.f.role==='worker'?3:2;
+  if(this.su===1){this.su=2;return}
+  if(this.su===2){
+   if(!(this.f.name||'').trim()||this.f.name.trim().length<2){this.err='Enter your full name.';return}
+   if(!/^\+?\d{9,13}$/.test((this.f.phone||'').replace(/[\s-]/g,''))){this.err='Enter a valid phone number, like +2376XXXXXXXX.';return}
+   if((this.f.password||'').length<8){this.err='Your password needs at least 8 characters.';return}}
+  if(this.su===3&&(!(this.f.trade||'').trim()||!(this.f.area||'').trim())){this.err='Add your trade and your area so people can find you.';return}
+  if(this.su<last)this.su++;else this.signup()},
+ async signup(){
+  this.busy=true;
+  try{const b=new FormData();['name','phone','password','role','trade','area','category','detail'].forEach(k=>b.append(k,(k==='phone'?(this.f.phone||'').replace(/[\s-]/g,''):this.f[k])||''));if(this.video&&this.f.role==='worker')b.append('video',this.video);
+   this.user=await this.api('signup',b);
+   if(this.f.bio)await this.bioEnrol(true);
+   this.say('Account created. Welcome to BlueHands.');this.f={role:'worker',category:'cert'};this.su=1;this.pickVideo({target:{files:[]}});
+   location.hash=this.user.role==='worker'?'workers':'wallet'}
+  catch(e){this.err=e.message}
+  this.busy=false},
+ async logout(){await this.api('logout',{});this.user=null;this.say('You are logged out.');location.hash='home'},
+ async bioEnrol(quiet){
+  try{const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'BlueHands'},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:this.user.phone,displayName:this.user.name},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});
+   const d=await this.api('bio_enrol',{});localStorage.setItem('bh_dev',JSON.stringify({phone:d.phone,token:d.token,cred:b64(c.rawId)}));
+   this.user.bio=true;if(!quiet)this.say('Biometric sign-in is on.')}
+  catch(e){this.say('Biometrics could not start on this device.')}},
+ async bioOff(){await this.api('bio_off',{});localStorage.removeItem('bh_dev');this.user.bio=false},
+ async bioLogin(){
+  const d=JSON.parse(localStorage.getItem('bh_dev')||'null');if(!d){this.err='Turn on biometrics after logging in on this device first.';return}
+  try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(d.cred)}],userVerification:'required',timeout:60000}});
+   this.user=await this.api('bio_login',{phone:d.phone,token:d.token});location.hash='wallet'}
+  catch(e){this.err='Biometric check did not complete. Use your password.'}},
+ startHire(w){if(!this.user){this.say('Log in first to hire.');location.hash='login';return}
+  if(this.user.role!=='employer'){this.say('Hiring needs an employer account.');return}this.hireF={};this.hire=w},
+ async doHire(){try{await this.api('hire',{worker_id:this.hire.id,title:this.hireF.title,amount:this.hireF.amount});this.hire=null;this.say('Escrow funded.');location.hash='wallet';this.loadWallet()}
+  catch(e){this.say(e.message)}},
+ async payGo(){try{await this.api(this.user.role==='employer'?'topup':'withdraw',{amount:this.pay.amount,method:this.pay.method});this.pay.amount='';this.say('Done.');this.loadWallet()}catch(e){this.say(e.message)}},
+ async settle(a,id){try{await this.api(a,{job_id:id});this.say(a==='release'?'Payment released.':'Refunded.');this.loadWallet()}catch(e){this.say(e.message)}},
+ async ivStart(){this.iv.msgs=[];this.iv.on=true;await this.ivAsk()},
+ async ivSend(){const t=this.iv.text.trim();if(!t||this.iv.busy)return;this.iv.msgs.push({role:'user',content:t});this.iv.text='';await this.ivAsk()},
+ async ivAsk(){this.iv.busy=true;try{const d=await this.api('interview',{role:this.iv.role,trade:this.iv.trade,messages:this.iv.msgs});this.iv.msgs.push({role:'assistant',content:d.reply})}
+  catch(e){this.iv.msgs.push({role:'assistant',content:e.message})}this.iv.busy=false;this.$nextTick(()=>{this.$refs.chat.scrollTop=1e9})}
+}}
+</script>
+</body></html>
